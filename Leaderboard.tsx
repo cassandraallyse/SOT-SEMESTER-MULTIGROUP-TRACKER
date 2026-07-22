@@ -99,20 +99,29 @@ export default function Leaderboard() {
   const [selectedGroupId, setSelectedGroupId] = useState<string>("all");
   const [isPrivateGroupView, setIsPrivateGroupView] = useState<boolean>(false);
 
-  // Read ?groupId= parameter from URL on load
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const urlGroupId = params.get("groupId") || params.get("group");
-    if (urlGroupId) {
-      setSelectedGroupId(urlGroupId);
-      setIsPrivateGroupView(true); // Locks view so participants can't switch groups
-    }
-  }, []);
-
   const { data: groups = [] } = useQuery<Group[]>({
     queryKey: ["groups"],
     queryFn: () => fetch("/app-api/groups").then((r) => r.json()),
   });
+
+  // Read ?groupId= or ?group= parameter from URL on load
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const urlGroupParam = params.get("groupId") || params.get("group");
+    if (urlGroupParam && groups.length > 0) {
+      // Match by exact ID or Group Name (case-insensitive)
+      const matchedGroup = groups.find(
+        (g) =>
+          String(g.id) === urlGroupParam ||
+          g.name.toLowerCase() === urlGroupParam.toLowerCase()
+      );
+
+      if (matchedGroup) {
+        setSelectedGroupId(String(matchedGroup.id));
+        setIsPrivateGroupView(true); // Hide group dropdown for cohort links
+      }
+    }
+  }, [groups]);
 
   const { data, isLoading, error } = useQuery<LeaderboardResponse | Participant[]>({
     queryKey: ["leaderboard", selectedGroupId],
@@ -144,7 +153,7 @@ export default function Leaderboard() {
   const lastUpdated: string | null = Array.isArray(data) ? null : data?.lastUpdated || null;
   const minLogDateStr: string = (data as LeaderboardResponse)?.minLogDate || "2026-07-13";
 
-  // Identify current group name if locked
+  // Get current active group object
   const currentGroupObj = groups.find((g) => String(g.id) === selectedGroupId);
 
   // Date range & week calculations
