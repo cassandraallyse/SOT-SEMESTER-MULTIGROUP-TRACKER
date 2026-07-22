@@ -57,6 +57,8 @@ import {
   ChevronUp,
   FolderPlus,
   Users,
+  Lock,
+  Key,
 } from "lucide-react";
 
 type Group = {
@@ -96,6 +98,7 @@ export default function Admin() {
   // Management accordions
   const [showManageGroups, setShowManageGroups] = useState(false);
   const [showManageThotties, setShowManageThotties] = useState(false);
+  const [showManageSecurity, setShowManageSecurity] = useState(false);
 
   // Group creation state
   const [newGroupName, setNewGroupName] = useState("");
@@ -106,6 +109,10 @@ export default function Admin() {
   const [newLocation, setNewLocation] = useState("");
   const [assignGroupId, setAssignGroupId] = useState<string>("");
   const [addingParticipant, setAddingParticipant] = useState(false);
+
+  // Security / Passcode reset state
+  const [newAdminPasscode, setNewAdminPasscode] = useState("");
+  const [updatingPasscode, setUpdatingPasscode] = useState(false);
 
   // CSV File upload state
   const [csvFile, setCsvFile] = useState<File | null>(null);
@@ -119,15 +126,28 @@ export default function Admin() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [passError, setPassError] = useState("");
 
-  const ADMIN_PIN = "2026";
-
-  function handleLogin(e: React.FormEvent) {
+  async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
-    if (passcode === ADMIN_PIN) {
-      setIsAuthenticated(true);
-      setPassError("");
-    } else {
-      setPassError("Incorrect passcode. Try again.");
+    if (!passcode) {
+      setPassError("Please enter a passcode.");
+      return;
+    }
+
+    try {
+      const res = await fetch("/app-api/verify-passcode", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ passcode, groupId: selectedGroupId }),
+      });
+
+      if (res.ok) {
+        setIsAuthenticated(true);
+        setPassError("");
+      } else {
+        setPassError("Incorrect passcode. Try again.");
+      }
+    } catch {
+      setPassError("Error verifying passcode.");
     }
   }
 
@@ -149,6 +169,35 @@ export default function Admin() {
     queryFn: () => fetch(`/app-api/logs/${selectedId}`).then((r) => r.json()),
     enabled: !!selectedId,
   });
+
+  async function handleUpdatePasscode(e: React.FormEvent) {
+    e.preventDefault();
+    if (!newAdminPasscode.trim() || newAdminPasscode.trim().length < 4) {
+      toast.error("Passcode must be at least 4 characters long");
+      return;
+    }
+
+    setUpdatingPasscode(true);
+    try {
+      const res = await fetch("/app-api/update-passcode", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          groupId: selectedGroupId,
+          newPasscode: newAdminPasscode.trim(),
+        }),
+      });
+
+      if (!res.ok) throw new Error("Failed to update passcode");
+
+      toast.success("Passcode updated successfully!");
+      setNewAdminPasscode("");
+    } catch {
+      toast.error("Error updating passcode");
+    } finally {
+      setUpdatingPasscode(false);
+    }
+  }
 
   async function handleAddGroup(e: React.FormEvent) {
     e.preventDefault();
@@ -489,9 +538,11 @@ export default function Admin() {
     return (
       <div className="max-w-sm mx-auto my-12 bg-raised border border-border rounded-lg p-6 space-y-4 shadow-sm">
         <div className="text-center space-y-1">
-          <h2 className="text-lg font-semibold">Admin Access Required</h2>
+          <h2 className="text-lg font-semibold flex items-center justify-center gap-2">
+            <Lock className="size-4" /> Admin Access Required
+          </h2>
           <p className="text-xs text-secondary">
-            Enter passcode to log entries.
+            Enter passcode to manage entries & groups.
           </p>
         </div>
         <form onSubmit={handleLogin} className="space-y-3">
@@ -508,7 +559,7 @@ export default function Admin() {
             </p>
           )}
           <Button variant="primary" className="w-full" type="submit">
-            Unlock Log Entry
+            Unlock Admin Panel
           </Button>
         </form>
       </div>
@@ -517,12 +568,50 @@ export default function Admin() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold tracking-tight">Log Entries</h1>
+      <h1 className="text-2xl font-semibold tracking-tight">Log Entries & Admin</h1>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Left Box: Forms */}
         <div className="space-y-6">
           
+          {/* Manage Security & Passcode Accordion */}
+          <div className="bg-raised border border-border rounded-lg overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setShowManageSecurity(!showManageSecurity)}
+              className="w-full px-5 py-3.5 flex items-center justify-between text-sm font-semibold text-primary hover:bg-inset/50 transition-colors cursor-pointer"
+            >
+              <span className="flex items-center gap-2">
+                <Key className="size-4 text-accent" /> Change Admin Passcode
+              </span>
+              {showManageSecurity ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
+            </button>
+
+            {showManageSecurity && (
+              <div className="p-5 border-t border-border space-y-3 bg-inset/30">
+                <form onSubmit={handleUpdatePasscode} className="space-y-3">
+                  <h3 className="text-xs font-semibold text-secondary uppercase tracking-wider">
+                    Set New Passcode
+                  </h3>
+                  <Input
+                    type="password"
+                    placeholder="Enter New Passcode (min 4 chars)"
+                    value={newAdminPasscode}
+                    onChange={(e) => setNewAdminPasscode(e.target.value)}
+                  />
+                  <Button
+                    variant="primary"
+                    className="w-full text-xs"
+                    type="submit"
+                    isLoading={updatingPasscode}
+                  >
+                    Update Passcode
+                  </Button>
+                </form>
+              </div>
+            )}
+          </div>
+
           {/* Manage Groups Accordion */}
           <div className="bg-raised border border-border rounded-lg overflow-hidden">
             <button
@@ -891,65 +980,4 @@ export default function Admin() {
           {selected && logs.length === 0 && (
             <p className="text-sm text-secondary py-8 text-center">
               No entries logged yet for {selected.name}.
-            </p>
-          )}
-
-          {logs.length > 0 && (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border-weak">
-                    <th className="text-left pb-2 text-secondary font-medium text-xs">Date</th>
-                    <th className="text-right pb-2 text-secondary font-medium text-xs">Steps</th>
-                    <th className="text-center pb-2 text-secondary font-medium text-xs">
-                      <Dumbbell className="size-3 inline" />
-                    </th>
-                    <th className="text-center pb-2 text-secondary font-medium text-xs">
-                      <Leaf className="size-3 inline" />
-                    </th>
-                    <th className="text-right pb-2 text-secondary font-medium text-xs">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border-weak">
-                  {logs.map((log) => (
-                    <tr key={log.id}>
-                      <td className="py-2 text-secondary text-xs">{formatDate(log.log_date)}</td>
-                      <td className="py-2 text-right font-medium">
-                        {log.steps > 0 ? log.steps.toLocaleString() : "—"}
-                      </td>
-                      <td className="py-2 text-center">
-                        {log.workout === 1 ? (
-                          <span className="text-success text-xs">✓</span>
-                        ) : (
-                          <span className="text-secondary text-xs">—</span>
-                        )}
-                      </td>
-                      <td className="py-2 text-center">
-                        {log.yoga === 1 ? (
-                          <span className="text-success text-xs">✓</span>
-                        ) : (
-                          <span className="text-secondary text-xs">—</span>
-                        )}
-                      </td>
-                      <td className="py-2 text-right">
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteEntry(log.id)}
-                          disabled={deletingId === log.id}
-                          className="text-secondary hover:text-error transition-colors p-1 rounded cursor-pointer"
-                          title="Delete entry"
-                        >
-                          <Trash2 className="size-3.5" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
+            </
