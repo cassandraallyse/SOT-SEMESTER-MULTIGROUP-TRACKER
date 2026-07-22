@@ -824,7 +824,7 @@ export default function Admin() {
                         ))}
                   </div>
                 )}
-              FormControl>
+              </FormControl>
               {errors.participant && (
                 <FormMessage>{errors.participant}</FormMessage>
               )}
