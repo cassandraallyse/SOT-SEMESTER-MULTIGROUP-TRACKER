@@ -12,7 +12,7 @@ function formatDate(dateStr: string): string {
   });
 }
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Progress } from "./components/Progress";
 import {
@@ -97,6 +97,17 @@ function formatLastUpdated(ts: string | null): string {
 
 export default function Leaderboard() {
   const [selectedGroupId, setSelectedGroupId] = useState<string>("all");
+  const [isPrivateGroupView, setIsPrivateGroupView] = useState<boolean>(false);
+
+  // Read ?groupId= parameter from URL on load
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const urlGroupId = params.get("groupId") || params.get("group");
+    if (urlGroupId) {
+      setSelectedGroupId(urlGroupId);
+      setIsPrivateGroupView(true); // Locks view so participants can't switch groups
+    }
+  }, []);
 
   const { data: groups = [] } = useQuery<Group[]>({
     queryKey: ["groups"],
@@ -133,11 +144,12 @@ export default function Leaderboard() {
   const lastUpdated: string | null = Array.isArray(data) ? null : data?.lastUpdated || null;
   const minLogDateStr: string = (data as LeaderboardResponse)?.minLogDate || "2026-07-13";
 
-  // Calculate semester start date from earliest logged entry or default to 2026-07-13
+  // Identify current group name if locked
+  const currentGroupObj = groups.find((g) => String(g.id) === selectedGroupId);
+
+  // Date range & week calculations
   const [sYear, sMonth, sDay] = minLogDateStr.split("T")[0].split("-").map(Number);
   const semesterStart = new Date(sYear, sMonth - 1, sDay);
-
-  // Calculate semester end date (8 weeks later)
   const semesterEnd = new Date(semesterStart.getTime() + 8 * 7 * 24 * 60 * 60 * 1000);
 
   const startMonthStr = semesterStart.toLocaleDateString("en-US", { month: "long" });
@@ -148,7 +160,6 @@ export default function Leaderboard() {
 
   const dateRangeLabel = `${startMonthStr} through ${endMonthStr} ${yearLabel}`;
 
-  // Calculate current week and completion percentage automatically based on today's date vs session start date
   const now = new Date();
   const diffInMs = Math.max(0, now.getTime() - semesterStart.getTime());
   const daysElapsed = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
@@ -166,8 +177,8 @@ export default function Leaderboard() {
 
   return (
     <div className="space-y-6">
-      {/* Group / Cohort Filter Bar */}
-      {groups.length > 0 && (
+      {/* Group / Cohort Filter Bar (Only visible if NOT accessed via private group link) */}
+      {!isPrivateGroupView && groups.length > 0 && (
         <div className="bg-raised border border-border rounded-lg p-3.5 flex items-center justify-between gap-4">
           <label className="text-xs font-semibold text-secondary flex items-center gap-2 shrink-0">
             <Users className="size-4 text-accent" /> Select Group / Cohort:
@@ -191,7 +202,7 @@ export default function Leaderboard() {
       <div className="flex flex-col md:flex-row md:items-end gap-4">
         <div className="flex-1">
           <h1 className="text-2xl font-semibold tracking-tight">
-            Progress Reports
+            {currentGroupObj ? `${currentGroupObj.name} Progress` : "Progress Reports"}
           </h1>
           <p className="text-secondary text-sm mt-1">
             Week {weeksElapsed} of {TOTAL_WEEKS} — {dateRangeLabel}
