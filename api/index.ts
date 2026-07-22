@@ -69,6 +69,8 @@ app.get("/app-api/leaderboard", async (c) => {
     const weekStartStr = weekStart.toISOString().split("T")[0];
 
     let rows;
+    let minLogDate = null;
+
     if (groupId && groupId !== "all") {
       const gId = Number(groupId);
       rows = await sql`
@@ -93,6 +95,14 @@ app.get("/app-api/leaderboard", async (c) => {
         GROUP BY p.id, p.group_id, p.name, p.location, p.steps_goal, p.workouts_goal, p.workouts_achievable
         ORDER BY steps_pct DESC, workouts_pct DESC
       `;
+
+      const [minRow] = await sql`
+        SELECT MIN(l.log_date)::text AS min_date
+        FROM sot_daily_logs l
+        JOIN sot_participants p ON p.id = l.participant_id
+        WHERE p.group_id = ${gId}
+      `;
+      minLogDate = minRow?.min_date || null;
     } else {
       rows = await sql`
         SELECT
@@ -115,6 +125,11 @@ app.get("/app-api/leaderboard", async (c) => {
         GROUP BY p.id, p.group_id, p.name, p.location, p.steps_goal, p.workouts_goal, p.workouts_achievable
         ORDER BY steps_pct DESC, workouts_pct DESC
       `;
+
+      const [minRow] = await sql`
+        SELECT MIN(log_date)::text AS min_date FROM sot_daily_logs
+      `;
+      minLogDate = minRow?.min_date || null;
     }
 
     const [lastLog] = await sql`
@@ -124,6 +139,7 @@ app.get("/app-api/leaderboard", async (c) => {
     return c.json({
       rows,
       lastUpdated: lastLog?.updated_at || null,
+      minLogDate,
     });
   } catch (err: any) {
     return c.json({ error: err.message }, 500);
