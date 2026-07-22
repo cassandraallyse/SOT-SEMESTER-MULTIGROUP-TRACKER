@@ -51,6 +51,7 @@ type Participant = {
 type LeaderboardResponse = {
   rows: Participant[];
   lastUpdated: string | null;
+  minLogDate: string | null;
 };
 
 const WEEK_STEPS_GOAL = 70000;
@@ -130,25 +131,38 @@ export default function Leaderboard() {
 
   const participants: Participant[] = Array.isArray(data) ? data : data?.rows || [];
   const lastUpdated: string | null = Array.isArray(data) ? null : data?.lastUpdated || null;
+  const minLogDateStr: string = (data as LeaderboardResponse)?.minLogDate || "2026-07-13";
 
-  // Semester schedule configuration
-  const SEMESTER_START = new Date("2026-07-13T00:00:00");
+  // Calculate semester start date from earliest logged entry or default to 2026-07-13
+  const [sYear, sMonth, sDay] = minLogDateStr.split("T")[0].split("-").map(Number);
+  const semesterStart = new Date(sYear, sMonth - 1, sDay);
+
+  // Calculate semester end date (8 weeks later)
+  const semesterEnd = new Date(semesterStart.getTime() + 8 * 7 * 24 * 60 * 60 * 1000);
+
+  const startMonthStr = semesterStart.toLocaleDateString("en-US", { month: "long" });
+  const endMonthStr = semesterEnd.toLocaleDateString("en-US", { month: "long" });
+  const startYear = semesterStart.getFullYear();
+  const endYear = semesterEnd.getFullYear();
+  const yearLabel = startYear === endYear ? `${startYear}` : `${startYear} - ${endYear}`;
+
+  const dateRangeLabel = `${startMonthStr} through ${endMonthStr} ${yearLabel}`;
+
+  // Calculate current week and completion percentage automatically based on today's date vs session start date
+  const now = new Date();
+  const diffInMs = Math.max(0, now.getTime() - semesterStart.getTime());
+  const daysElapsed = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
+
   const TOTAL_WEEKS = 8;
   const TOTAL_DAYS = TOTAL_WEEKS * 7;
 
-  const now = new Date();
-  const diffInMs = Math.max(0, now.getTime() - SEMESTER_START.getTime());
-  const daysElapsed = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
+  let weeksElapsed = Math.min(TOTAL_WEEKS, Math.max(1, Math.floor(daysElapsed / 7) + 1));
+  let semesterProgressPct = Math.min(100, Math.max(0, Math.round((daysElapsed / TOTAL_DAYS) * 100)));
 
-  const weeksElapsed = Math.min(
-    TOTAL_WEEKS,
-    Math.max(1, Math.floor(daysElapsed / 7) + 1)
-  );
-
-  const semesterProgressPct = Math.min(
-    100,
-    Math.max(0, Math.round((daysElapsed / TOTAL_DAYS) * 100))
-  );
+  if (daysElapsed >= TOTAL_DAYS) {
+    weeksElapsed = 8;
+    semesterProgressPct = 100;
+  }
 
   return (
     <div className="space-y-6">
@@ -180,7 +194,7 @@ export default function Leaderboard() {
             Progress Reports
           </h1>
           <p className="text-secondary text-sm mt-1">
-            Week {weeksElapsed} of {TOTAL_WEEKS} — July through September 2026
+            Week {weeksElapsed} of {TOTAL_WEEKS} — {dateRangeLabel}
           </p>
           <p className="text-xs text-secondary flex items-center gap-1.5 mt-1.5">
             <Clock className="size-3.5" />
