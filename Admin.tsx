@@ -824,7 +824,7 @@ export default function Admin() {
                         ))}
                   </div>
                 )}
-              </FormControl>
+              FormControl>
               {errors.participant && (
                 <FormMessage>{errors.participant}</FormMessage>
               )}
@@ -980,4 +980,65 @@ export default function Admin() {
           {selected && logs.length === 0 && (
             <p className="text-sm text-secondary py-8 text-center">
               No entries logged yet for {selected.name}.
-            </
+            </p>
+          )}
+
+          {logs.length > 0 && (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border-weak">
+                    <th className="text-left pb-2 text-secondary font-medium text-xs">Date</th>
+                    <th className="text-right pb-2 text-secondary font-medium text-xs">Steps</th>
+                    <th className="text-center pb-2 text-secondary font-medium text-xs">
+                      <Dumbbell className="size-3 inline" />
+                    </th>
+                    <th className="text-center pb-2 text-secondary font-medium text-xs">
+                      <Leaf className="size-3 inline" />
+                    </th>
+                    <th className="text-right pb-2 text-secondary font-medium text-xs">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border-weak">
+                  {logs.map((log) => (
+                    <tr key={log.id}>
+                      <td className="py-2 text-secondary text-xs">{formatDate(log.log_date)}</td>
+                      <td className="py-2 text-right font-medium">
+                        {log.steps > 0 ? log.steps.toLocaleString() : "—"}
+                      </td>
+                      <td className="py-2 text-center">
+                        {log.workout === 1 ? (
+                          <span className="text-success text-xs">✓</span>
+                        ) : (
+                          <span className="text-secondary text-xs">—</span>
+                        )}
+                      </td>
+                      <td className="py-2 text-center">
+                        {log.yoga === 1 ? (
+                          <span className="text-success text-xs">✓</span>
+                        ) : (
+                          <span className="text-secondary text-xs">—</span>
+                        )}
+                      </td>
+                      <td className="py-2 text-right">
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteEntry(log.id)}
+                          disabled={deletingId === log.id}
+                          className="text-secondary hover:text-error transition-colors p-1 rounded cursor-pointer"
+                          title="Delete entry"
+                        >
+                          <Trash2 className="size-3.5" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
