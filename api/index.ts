@@ -12,6 +12,59 @@ function getDb() {
   return neon(dbUrl);
 }
 
+// POST /app-api/verify-passcode — verifies login passcode against group settings
+app.post("/app-api/verify-passcode", async (c) => {
+  try {
+    const sql = getDb();
+    const body = await c.req.json();
+    const { passcode, groupId } = body;
+
+    let validPins = ["2026"];
+    if (groupId && groupId !== "all") {
+      const [g] = await sql`SELECT admin_pin FROM sot_groups WHERE id = ${Number(groupId)}`;
+      if (g?.admin_pin) validPins.push(g.admin_pin);
+    } else {
+      const rows = await sql`SELECT admin_pin FROM sot_groups WHERE admin_pin IS NOT NULL`;
+      rows.forEach((r) => validPins.push(r.admin_pin));
+    }
+
+    if (validPins.includes(passcode)) {
+      return c.json({ success: true });
+    } else {
+      return c.json({ error: "Incorrect passcode" }, 401);
+    }
+  } catch (err: any) {
+    return c.json({ error: err.message }, 500);
+  }
+});
+
+// POST /app-api/update-passcode — updates admin passcode
+app.post("/app-api/update-passcode", async (c) => {
+  try {
+    const sql = getDb();
+    const body = await c.req.json();
+    const { groupId, newPasscode } = body;
+
+    if (!newPasscode || newPasscode.trim().length < 4) {
+      return c.json({ error: "Passcode must be at least 4 characters" }, 400);
+    }
+
+    if (groupId && groupId !== "all") {
+      await sql`
+        UPDATE sot_groups SET admin_pin = ${newPasscode.trim()} WHERE id = ${Number(groupId)}
+      `;
+    } else {
+      await sql`
+        UPDATE sot_groups SET admin_pin = ${newPasscode.trim()}
+      `;
+    }
+
+    return c.json({ success: true });
+  } catch (err: any) {
+    return c.json({ error: err.message }, 500);
+  }
+});
+
 // GET /app-api/groups — list all groups/cohorts
 app.get("/app-api/groups", async (c) => {
   try {
@@ -32,7 +85,7 @@ app.post("/app-api/groups", async (c) => {
     if (!name) return c.json({ error: "Group name is required" }, 400);
 
     const [row] = await sql`
-      INSERT INTO sot_groups (name) VALUES (${name}) RETURNING *
+      INSERT INTO sot_groups (name, admin_pin) VALUES (${name}, '2026') RETURNING *
     `;
     return c.json(row);
   } catch (err: any) {
