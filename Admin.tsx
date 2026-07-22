@@ -12,6 +12,26 @@ function formatDate(dateStr: string): string {
   });
 }
 
+function parseCsvLine(line: string): string[] {
+  const result: string[] = [];
+  let current = "";
+  let inQuotes = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    if (char === '"' || char === "'") {
+      inQuotes = !inQuotes;
+    } else if (char === "," && !inQuotes) {
+      result.push(current.trim().replace(/^["']|["']$/g, ""));
+      current = "";
+    } else {
+      current += char;
+    }
+  }
+  result.push(current.trim().replace(/^["']|["']$/g, ""));
+  return result;
+}
+
 import React, { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "./components/Button";
@@ -288,10 +308,10 @@ export default function Admin() {
         const text = e.target?.result as string;
         if (!text) throw new Error("File is empty");
 
-        const lines = text.split("\n").map((l) => l.trim()).filter((l) => l.length > 0);
-        if (lines.length < 2) throw new Error("CSV file too short");
+        const rawLines = text.split("\n").map((l) => l.trim()).filter((l) => l.length > 0);
+        if (rawLines.length < 2) throw new Error("CSV file too short");
 
-        const headerCols = lines[0].split(",").map((s) => s.trim().replace(/^["']|["']$/g, ""));
+        const headerCols = parseCsvLine(rawLines[0]);
         
         const dateColIndices: { idx: number; isoDate: string }[] = [];
         headerCols.forEach((col, idx) => {
@@ -311,8 +331,8 @@ export default function Admin() {
           let rowTypes: Record<string, string[]> = {};
           const bulkPayloads: { participant_id: number; logs: any[] }[] = [];
 
-          for (let i = 1; i < lines.length; i++) {
-            const parts = lines[i].split(",").map((s) => s.trim().replace(/^["']|["']$/g, ""));
+          for (let i = 1; i < rawLines.length; i++) {
+            const parts = parseCsvLine(rawLines[i]);
             const firstCol = parts[0];
 
             if (!firstCol) continue;
@@ -372,8 +392,8 @@ export default function Admin() {
           }
 
           const parsedLogs = [];
-          for (let i = 0; i < lines.length; i++) {
-            const parts = lines[i].split(",").map((s) => s.trim().replace(/^["']|["']$/g, ""));
+          for (let i = 0; i < rawLines.length; i++) {
+            const parts = parseCsvLine(rawLines[i]);
             if (i === 0 && isNaN(Number(parts[1]))) continue;
 
             if (parts.length >= 2) {
