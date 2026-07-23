@@ -146,7 +146,11 @@ app.get("/app-api/leaderboard", async (c) => {
         LEFT JOIN sot_daily_logs l ON l.participant_id = p.id
         WHERE p.group_id = ${gId}
         GROUP BY p.id, p.group_id, p.name, p.location, p.steps_goal, p.workouts_goal, p.workouts_achievable
-        ORDER BY steps_pct DESC, workouts_pct DESC
+        ORDER BY 
+          steps_pct DESC, 
+          workouts_pct DESC, 
+          COALESCE(SUM(l.workout), 0) DESC, 
+          COALESCE(SUM(l.steps), 0) DESC
       `;
 
       const [minRow] = await sql`
@@ -176,7 +180,11 @@ app.get("/app-api/leaderboard", async (c) => {
         FROM sot_participants p
         LEFT JOIN sot_daily_logs l ON l.participant_id = p.id
         GROUP BY p.id, p.group_id, p.name, p.location, p.steps_goal, p.workouts_goal, p.workouts_achievable
-        ORDER BY steps_pct DESC, workouts_pct DESC
+        ORDER BY 
+          steps_pct DESC, 
+          workouts_pct DESC, 
+          COALESCE(SUM(l.workout), 0) DESC, 
+          COALESCE(SUM(l.steps), 0) DESC
       `;
 
       const [minRow] = await sql`
@@ -342,6 +350,10 @@ app.delete("/app-api/logs/:id", async (c) => {
   }
 });
 
+export const GET = handle(app);
+export const POST = handle(app);
+export const DELETE = handle(app);
+export default app;
 export const GET = handle(app);
 export const POST = handle(app);
 export const DELETE = handle(app);
