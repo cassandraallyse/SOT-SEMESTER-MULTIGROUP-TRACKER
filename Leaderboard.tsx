@@ -24,6 +24,7 @@ import {
   Clock,
   Leaf,
   Users,
+  Sparkles,
 } from "lucide-react";
 
 type Group = {
@@ -65,6 +66,17 @@ const RANK_LABELS = [
   { min: 0, label: "Just Getting Started 🌱", color: "text-secondary" },
 ];
 
+const MANTRAS = [
+  "Miracles are happening!",
+  "Things are happening *for* me, not to me.",
+  "I'm getting stronger as I age.",
+  "I'm getting hotter as I age.",
+  "My body knows exactly what to do.",
+  "I am willing to do what it takes to have what I want.",
+  "The universe supports me.",
+  "Things are always working out for my highest good.",
+];
+
 function getRankLabel(pct: number) {
   return RANK_LABELS.find((r) => pct >= r.min) ?? RANK_LABELS[3];
 }
@@ -98,6 +110,12 @@ function formatLastUpdated(ts: string | null): string {
 export default function Leaderboard() {
   const [selectedGroupId, setSelectedGroupId] = useState<string>("all");
   const [isPrivateGroupView, setIsPrivateGroupView] = useState<boolean>(false);
+  const [mantra, setMantra] = useState<string>("");
+
+  useEffect(() => {
+    const randomIndex = Math.floor(Math.random() * MANTRAS.length);
+    setMantra(MANTRAS[randomIndex]);
+  }, []);
 
   const { data: groups = [] } = useQuery<Group[]>({
     queryKey: ["groups"],
@@ -186,6 +204,18 @@ export default function Leaderboard() {
 
   return (
     <div className="space-y-6">
+      {/* Daily Mantra Banner */}
+      {mantra && (
+        <div className="bg-raised border border-accent/30 rounded-lg p-3.5 text-center shadow-sm flex flex-col items-center justify-center gap-1">
+          <p className="text-[10px] uppercase tracking-widest text-accent font-bold flex items-center gap-1">
+            <Sparkles className="size-3" /> Daily Mantra <Sparkles className="size-3" />
+          </p>
+          <p className="text-sm font-semibold italic text-primary">
+            "{mantra}"
+          </p>
+        </div>
+      )}
+
       {/* Group / Cohort Filter Bar (Only visible if NOT accessed via private group link) */}
       {!isPrivateGroupView && groups.length > 0 && (
         <div className="bg-raised border border-border rounded-lg p-3.5 flex items-center justify-between gap-4">
