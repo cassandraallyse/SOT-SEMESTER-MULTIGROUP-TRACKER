@@ -25,6 +25,7 @@ import {
   Leaf,
   Users,
   Sparkles,
+  Quote,
 } from "lucide-react";
 
 type Group = {
@@ -127,7 +128,6 @@ export default function Leaderboard() {
     const params = new URLSearchParams(window.location.search);
     const urlGroupParam = params.get("groupId") || params.get("group");
     if (urlGroupParam && groups.length > 0) {
-      // Match by exact ID or Group Name (case-insensitive)
       const matchedGroup = groups.find(
         (g) =>
           String(g.id) === urlGroupParam ||
@@ -136,7 +136,7 @@ export default function Leaderboard() {
 
       if (matchedGroup) {
         setSelectedGroupId(String(matchedGroup.id));
-        setIsPrivateGroupView(true); // Hide group dropdown for cohort links
+        setIsPrivateGroupView(true);
       }
     }
   }, [groups]);
@@ -169,30 +169,19 @@ export default function Leaderboard() {
 
   const participants: Participant[] = Array.isArray(data) ? data : data?.rows || [];
   const lastUpdated: string | null = Array.isArray(data) ? null : data?.lastUpdated || null;
-  const minLogDateStr: string = (data as LeaderboardResponse)?.minLogDate || "2026-07-13";
 
-  // Get current active group object
   const currentGroupObj = groups.find((g) => String(g.id) === selectedGroupId);
 
-  // Date range & week calculations
-  const [sYear, sMonth, sDay] = minLogDateStr.split("T")[0].split("-").map(Number);
-  const semesterStart = new Date(sYear, sMonth - 1, sDay);
-  const semesterEnd = new Date(semesterStart.getTime() + 8 * 7 * 24 * 60 * 60 * 1000);
+  // Locked 8-Week Session Dates: September 14, 2026 to November 8, 2026
+  const semesterStart = new Date(2026, 8, 14); // Month is 0-indexed (8 = Sept)
+  const TOTAL_WEEKS = 8;
+  const TOTAL_DAYS = 56;
 
-  const startMonthStr = semesterStart.toLocaleDateString("en-US", { month: "long" });
-  const endMonthStr = semesterEnd.toLocaleDateString("en-US", { month: "long" });
-  const startYear = semesterStart.getFullYear();
-  const endYear = semesterEnd.getFullYear();
-  const yearLabel = startYear === endYear ? `${startYear}` : `${startYear} - ${endYear}`;
-
-  const dateRangeLabel = `${startMonthStr} through ${endMonthStr} ${yearLabel}`;
+  const dateRangeLabel = "September 14 – November 8, 2026";
 
   const now = new Date();
   const diffInMs = Math.max(0, now.getTime() - semesterStart.getTime());
   const daysElapsed = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
-
-  const TOTAL_WEEKS = 8;
-  const TOTAL_DAYS = TOTAL_WEEKS * 7;
 
   let weeksElapsed = Math.min(TOTAL_WEEKS, Math.max(1, Math.floor(daysElapsed / 7) + 1));
   let semesterProgressPct = Math.min(100, Math.max(0, Math.round((daysElapsed / TOTAL_DAYS) * 100)));
@@ -204,28 +193,34 @@ export default function Leaderboard() {
 
   return (
     <div className="space-y-6">
-      {/* Daily Mantra Banner */}
+      {/* Upgraded Mantra Card with Ambient Glow */}
       {mantra && (
-        <div className="bg-raised border border-accent/30 rounded-lg p-3.5 text-center shadow-sm flex flex-col items-center justify-center gap-1">
-          <p className="text-[10px] uppercase tracking-widest text-accent font-bold flex items-center gap-1">
-            <Sparkles className="size-3" /> Daily Mantra <Sparkles className="size-3" />
-          </p>
-          <p className="text-sm font-semibold italic text-primary">
-            "{mantra}"
-          </p>
+        <div className="relative overflow-hidden rounded-2xl border border-purple-500/30 bg-gradient-to-r from-purple-950/40 via-slate-900/90 to-purple-950/40 p-5 text-center shadow-xl shadow-purple-950/20 backdrop-blur-md">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-[11px] font-bold uppercase tracking-widest text-purple-300 mb-2 shadow-inner">
+            <Sparkles className="size-3 text-purple-400 animate-pulse" />
+            <span>Daily Mantra</span>
+            <Sparkles className="size-3 text-purple-400 animate-pulse" />
+          </div>
+          <div className="relative flex items-center justify-center gap-2">
+            <Quote className="size-5 text-purple-500/40 rotate-180 shrink-0 hidden sm:inline" />
+            <p className="text-base sm:text-lg font-semibold italic text-white tracking-wide leading-relaxed">
+              {mantra}
+            </p>
+            <Quote className="size-5 text-purple-500/40 shrink-0 hidden sm:inline" />
+          </div>
         </div>
       )}
 
-      {/* Group / Cohort Filter Bar (Only visible if NOT accessed via private group link) */}
+      {/* Group / Cohort Filter Bar */}
       {!isPrivateGroupView && groups.length > 0 && (
-        <div className="bg-raised border border-border rounded-lg p-3.5 flex items-center justify-between gap-4">
+        <div className="bg-raised border border-border rounded-xl p-3.5 flex items-center justify-between gap-4 shadow-sm">
           <label className="text-xs font-semibold text-secondary flex items-center gap-2 shrink-0">
             <Users className="size-4 text-accent" /> Select Group / Cohort:
           </label>
           <select
             value={selectedGroupId}
             onChange={(e) => setSelectedGroupId(e.target.value)}
-            className="bg-inset border border-border text-primary font-medium rounded-md px-3 py-1.5 text-sm focus:outline-none focus:border-accent cursor-pointer max-w-xs w-full"
+            className="bg-inset border border-border text-primary font-medium rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-accent cursor-pointer max-w-xs w-full transition"
           >
             <option value="all">All Groups</option>
             {groups.map((g) => (
@@ -237,23 +232,31 @@ export default function Leaderboard() {
         </div>
       )}
 
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-end gap-4">
-        <div className="flex-1">
-          <h1 className="text-2xl font-semibold tracking-tight">
+      {/* Hero Header with Stacked Badges */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pt-1">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">
             {currentGroupObj ? `${currentGroupObj.name} Progress` : "Progress Reports"}
           </h1>
-          <p className="text-secondary text-sm mt-1">
-            Week {weeksElapsed} of {TOTAL_WEEKS} — {dateRangeLabel}
-          </p>
           <p className="text-xs text-secondary flex items-center gap-1.5 mt-1.5">
-            <Clock className="size-3.5" />
-            Last Updated: <span className="font-medium text-primary">{formatLastUpdated(lastUpdated)}</span>
+            <Clock className="size-3.5 text-slate-500" />
+            Last Updated: <span className="font-medium text-slate-300">{formatLastUpdated(lastUpdated)}</span>
           </p>
         </div>
-        <div className="flex items-center gap-2 text-sm text-secondary">
-          <TrendingUp className="size-4" />
-          <span>Semester: {semesterProgressPct}% complete</span>
+
+        {/* Stacked Timeline Badges */}
+        <div className="flex flex-col items-start md:items-end gap-2">
+          <span className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg bg-slate-800/80 border border-slate-700/80 text-slate-300 shadow-sm">
+            <CalendarDays className="size-3.5 text-purple-400" />
+            <span>Week <strong className="text-white">{weeksElapsed}</strong> of {TOTAL_WEEKS}</span>
+            <span className="text-slate-500">·</span>
+            <span className="text-slate-400">{dateRangeLabel}</span>
+          </span>
+
+          <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-purple-500/10 border border-purple-500/30 text-purple-300 shadow-sm">
+            <TrendingUp className="size-3.5 text-purple-400" />
+            <span>Semester: <strong className="text-white font-bold">{semesterProgressPct}%</strong> complete</span>
+          </span>
         </div>
       </div>
 
@@ -287,7 +290,7 @@ export default function Leaderboard() {
                     )}
                     <div>
                       <h2 className="text-base font-semibold">{p.name}</h2>
-                      <p className="text-xs text-secondary">{p.location}</p>
+                      {p.location && <p className="text-xs text-secondary">{p.location}</p>}
                     </div>
                   </div>
                 </div>
@@ -352,7 +355,6 @@ export default function Leaderboard() {
                   <CalendarDays className="size-3.5" /> This week
                 </p>
                 <div className="grid grid-cols-2 gap-3">
-                  {/* Weekly steps */}
                   <div className="space-y-1">
                     <div className="flex items-center justify-between text-xs">
                       <span className="text-secondary">Steps</span>
@@ -384,7 +386,6 @@ export default function Leaderboard() {
                       aria-label={`${p.name} this week steps`}
                     />
                   </div>
-                  {/* Weekly workouts */}
                   <div className="space-y-1">
                     <div className="flex items-center justify-between text-xs">
                       <span className="text-secondary">Workouts</span>
