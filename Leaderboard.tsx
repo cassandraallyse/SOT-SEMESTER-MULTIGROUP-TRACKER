@@ -123,7 +123,6 @@ export default function Leaderboard() {
     queryFn: () => fetch("/app-api/groups").then((r) => r.json()),
   });
 
-  // Read ?groupId= or ?group= parameter from URL on load
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const urlGroupParam = params.get("groupId") || params.get("group");
@@ -151,9 +150,9 @@ export default function Leaderboard() {
   if (isLoading) {
     return (
       <div className="space-y-4 mt-4">
-        <div className="h-8 bg-inset rounded-md animate-pulse w-48" />
+        <div className="h-8 bg-slate-900 rounded-md animate-pulse w-48" />
         {[...Array(6)].map((_, i) => (
-          <div key={i} className="h-40 bg-inset rounded-lg animate-pulse" />
+          <div key={i} className="h-40 bg-slate-900 rounded-lg animate-pulse" />
         ))}
       </div>
     );
@@ -173,7 +172,7 @@ export default function Leaderboard() {
   const currentGroupObj = groups.find((g) => String(g.id) === selectedGroupId);
 
   // Locked 8-Week Session Dates: September 14, 2026 to November 8, 2026
-  const semesterStart = new Date(2026, 8, 14); // Month is 0-indexed (8 = Sept)
+  const semesterStart = new Date(2026, 8, 14); // Month 8 is Sept
   const TOTAL_WEEKS = 8;
   const TOTAL_DAYS = 56;
 
@@ -211,16 +210,16 @@ export default function Leaderboard() {
         </div>
       )}
 
-      {/* Group / Cohort Filter Bar */}
+      {/* Group / Cohort Filter Bar (Dark Mode Updated) */}
       {!isPrivateGroupView && groups.length > 0 && (
-        <div className="bg-raised border border-border rounded-xl p-3.5 flex items-center justify-between gap-4 shadow-sm">
-          <label className="text-xs font-semibold text-secondary flex items-center gap-2 shrink-0">
-            <Users className="size-4 text-accent" /> Select Group / Cohort:
+        <div className="bg-slate-900/70 border border-slate-800 rounded-xl p-3.5 flex items-center justify-between gap-4 shadow-sm">
+          <label className="text-xs font-semibold text-slate-300 flex items-center gap-2 shrink-0">
+            <Users className="size-4 text-purple-400" /> Select Group / Cohort:
           </label>
           <select
             value={selectedGroupId}
             onChange={(e) => setSelectedGroupId(e.target.value)}
-            className="bg-inset border border-border text-primary font-medium rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-accent cursor-pointer max-w-xs w-full transition"
+            className="bg-slate-950 border border-slate-700 text-white font-medium rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-purple-500 cursor-pointer max-w-xs w-full transition"
           >
             <option value="all">All Groups</option>
             {groups.map((g) => (
