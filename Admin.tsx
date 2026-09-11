@@ -104,7 +104,7 @@ export default function Admin() {
   const [newGroupName, setNewGroupName] = useState("");
   const [addingGroup, setAddingGroup] = useState(false);
 
-  // Thottie creation state
+  // Participant creation state
   const [newName, setNewName] = useState("");
   const [newLocation, setNewLocation] = useState("");
   const [assignGroupId, setAssignGroupId] = useState<string>("");
@@ -229,7 +229,7 @@ export default function Admin() {
   async function handleDeleteGroup(g: Group) {
     if (
       !window.confirm(
-        `Are you sure you want to delete group "${g.name}"? Thotties in this group will not be deleted, but will become unassigned.`
+        `Are you sure you want to delete group "${g.name}"? Participants in this group will not be deleted, but will become unassigned.`
       )
     ) {
       return;
@@ -279,7 +279,7 @@ export default function Admin() {
       queryClient.invalidateQueries({ queryKey: ["participants"] });
       queryClient.invalidateQueries({ queryKey: ["leaderboard"] });
     } catch {
-      toast.error("Error adding Thottie");
+      toast.error("Error adding participant");
     } finally {
       setAddingParticipant(false);
     }
@@ -305,13 +305,13 @@ export default function Admin() {
       queryClient.invalidateQueries({ queryKey: ["participants"] });
       queryClient.invalidateQueries({ queryKey: ["leaderboard"] });
     } catch {
-      toast.error("Error removing Thottie");
+      toast.error("Error removing participant");
     }
   }
 
   async function handleSingleSave() {
     const errs: Record<string, string> = {};
-    if (!selectedId) errs.participant = "Select a Thottie";
+    if (!selectedId) errs.participant = "Select a participant";
     if (!date) errs.date = "Date is required";
     setErrors(errs);
     if (Object.keys(errs).length > 0) return;
@@ -428,14 +428,14 @@ export default function Admin() {
             }
           }
 
-          toast.success(`Successfully uploaded ${totalCount} entries across all Thotties!`);
+          toast.success(`Successfully uploaded ${totalCount} entries across participants!`);
           queryClient.invalidateQueries({ queryKey: ["leaderboard"] });
           if (selectedId) queryClient.invalidateQueries({ queryKey: ["logs", selectedId] });
           setCsvFile(null);
 
         } else {
           if (!selectedId) {
-            setErrors({ participant: "Select a Thottie first for single-person CSV" });
+            setErrors({ participant: "Select a participant first for single-person CSV" });
             setSaving(false);
             return;
           }
@@ -536,12 +536,12 @@ export default function Admin() {
 
   if (!isAuthenticated) {
     return (
-      <div className="max-w-sm mx-auto my-12 bg-raised border border-border rounded-lg p-6 space-y-4 shadow-sm">
+      <div className="max-w-sm mx-auto my-12 bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-4 shadow-xl">
         <div className="text-center space-y-1">
-          <h2 className="text-lg font-semibold flex items-center justify-center gap-2">
-            <Lock className="size-4" /> Admin Access Required
+          <h2 className="text-lg font-semibold text-white flex items-center justify-center gap-2">
+            <Lock className="size-4 text-purple-400" /> Admin Access Required
           </h2>
-          <p className="text-xs text-secondary">
+          <p className="text-xs text-slate-400">
             Enter passcode to manage entries & groups.
           </p>
         </div>
@@ -551,14 +551,14 @@ export default function Admin() {
             placeholder="Enter Passcode"
             value={passcode}
             onChange={(e) => setPasscode(e.target.value)}
-            className="text-center tracking-widest text-lg"
+            className="text-center tracking-widest text-lg bg-slate-950 border-slate-700 text-white placeholder-slate-500"
           />
           {passError && (
-            <p className="text-xs text-error text-center font-medium">
+            <p className="text-xs text-red-400 text-center font-medium">
               {passError}
             </p>
           )}
-          <Button variant="primary" className="w-full" type="submit">
+          <Button variant="primary" className="w-full bg-purple-600 hover:bg-purple-500 text-white" type="submit">
             Unlock Admin Panel
           </Button>
         </form>
@@ -567,30 +567,30 @@ export default function Admin() {
   }
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-semibold tracking-tight">Log Entries & Admin</h1>
+    <div className="space-y-6 text-slate-100">
+      <h1 className="text-2xl font-bold tracking-tight text-white">Log Entries & Admin</h1>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Left Box: Forms */}
         <div className="space-y-6">
           
           {/* Manage Security & Passcode Accordion */}
-          <div className="bg-raised border border-border rounded-lg overflow-hidden">
+          <div className="bg-slate-900/70 border border-slate-800 rounded-xl overflow-hidden shadow-sm">
             <button
               type="button"
               onClick={() => setShowManageSecurity(!showManageSecurity)}
-              className="w-full px-5 py-3.5 flex items-center justify-between text-sm font-semibold text-primary hover:bg-inset/50 transition-colors cursor-pointer"
+              className="w-full px-5 py-3.5 flex items-center justify-between text-sm font-semibold text-white hover:bg-slate-800/50 transition-colors cursor-pointer"
             >
               <span className="flex items-center gap-2">
-                <Key className="size-4 text-accent" /> Change Admin Passcode
+                <Key className="size-4 text-purple-400" /> Change Admin Passcode
               </span>
-              {showManageSecurity ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
+              {showManageSecurity ? <ChevronUp className="size-4 text-slate-400" /> : <ChevronDown className="size-4 text-slate-400" />}
             </button>
 
             {showManageSecurity && (
-              <div className="p-5 border-t border-border space-y-3 bg-inset/30">
+              <div className="p-5 border-t border-slate-800 space-y-3 bg-slate-950/40">
                 <form onSubmit={handleUpdatePasscode} className="space-y-3">
-                  <h3 className="text-xs font-semibold text-secondary uppercase tracking-wider">
+                  <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
                     Set New Passcode
                   </h3>
                   <Input
@@ -598,10 +598,11 @@ export default function Admin() {
                     placeholder="Enter New Passcode (min 4 chars)"
                     value={newAdminPasscode}
                     onChange={(e) => setNewAdminPasscode(e.target.value)}
+                    className="bg-slate-950 border-slate-700 text-white placeholder-slate-500"
                   />
                   <Button
                     variant="primary"
-                    className="w-full text-xs"
+                    className="w-full text-xs bg-purple-600 hover:bg-purple-500 text-white"
                     type="submit"
                     isLoading={updatingPasscode}
                   >
@@ -613,23 +614,23 @@ export default function Admin() {
           </div>
 
           {/* Manage Groups Accordion */}
-          <div className="bg-raised border border-border rounded-lg overflow-hidden">
+          <div className="bg-slate-900/70 border border-slate-800 rounded-xl overflow-hidden shadow-sm">
             <button
               type="button"
               onClick={() => setShowManageGroups(!showManageGroups)}
-              className="w-full px-5 py-3.5 flex items-center justify-between text-sm font-semibold text-primary hover:bg-inset/50 transition-colors cursor-pointer"
+              className="w-full px-5 py-3.5 flex items-center justify-between text-sm font-semibold text-white hover:bg-slate-800/50 transition-colors cursor-pointer"
             >
               <span className="flex items-center gap-2">
-                <FolderPlus className="size-4" /> Manage Groups / Cohorts
+                <FolderPlus className="size-4 text-purple-400" /> Manage Groups / Cohorts
               </span>
-              {showManageGroups ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
+              {showManageGroups ? <ChevronUp className="size-4 text-slate-400" /> : <ChevronDown className="size-4 text-slate-400" />}
             </button>
 
             {showManageGroups && (
-              <div className="p-5 border-t border-border space-y-5 bg-inset/30">
+              <div className="p-5 border-t border-slate-800 space-y-5 bg-slate-950/40">
                 {/* Add New Group Form */}
                 <form onSubmit={handleAddGroup} className="space-y-3">
-                  <h3 className="text-xs font-semibold text-secondary uppercase tracking-wider">
+                  <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
                     Create New Group
                   </h3>
                   <div className="flex gap-2">
@@ -637,10 +638,11 @@ export default function Admin() {
                       placeholder="Group Name (e.g. Morning Squad)"
                       value={newGroupName}
                       onChange={(e) => setNewGroupName(e.target.value)}
+                      className="bg-slate-950 border-slate-700 text-white placeholder-slate-500"
                     />
                     <Button
                       variant="primary"
-                      className="text-xs shrink-0"
+                      className="text-xs shrink-0 bg-purple-600 hover:bg-purple-500 text-white"
                       type="submit"
                       isLoading={addingGroup}
                     >
@@ -650,21 +652,21 @@ export default function Admin() {
                 </form>
 
                 {/* List Existing Groups */}
-                <div className="space-y-2 pt-2 border-t border-border-weak">
-                  <h3 className="text-xs font-semibold text-secondary uppercase tracking-wider">
+                <div className="space-y-2 pt-2 border-t border-slate-800">
+                  <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
                     Existing Groups
                   </h3>
                   <div className="space-y-1 max-h-40 overflow-y-auto pr-1">
                     {groups.map((g) => (
                       <div
                         key={g.id}
-                        className="flex items-center justify-between text-xs py-1.5 px-2 bg-inset rounded border border-border-weak"
+                        className="flex items-center justify-between text-xs py-1.5 px-2 bg-slate-950 rounded-md border border-slate-800"
                       >
-                        <span className="font-medium">{g.name}</span>
+                        <span className="font-medium text-slate-200">{g.name}</span>
                         <button
                           type="button"
                           onClick={() => handleDeleteGroup(g)}
-                          className="text-secondary hover:text-error transition-colors p-1"
+                          className="text-slate-400 hover:text-red-400 transition-colors p-1 cursor-pointer"
                           title="Delete Group"
                         >
                           <Trash2 className="size-3.5" />
@@ -677,43 +679,45 @@ export default function Admin() {
             )}
           </div>
 
-          {/* Manage Thotties Accordion */}
-          <div className="bg-raised border border-border rounded-lg overflow-hidden">
+          {/* Manage Participants Accordion */}
+          <div className="bg-slate-900/70 border border-slate-800 rounded-xl overflow-hidden shadow-sm">
             <button
               type="button"
               onClick={() => setShowManageThotties(!showManageThotties)}
-              className="w-full px-5 py-3.5 flex items-center justify-between text-sm font-semibold text-primary hover:bg-inset/50 transition-colors cursor-pointer"
+              className="w-full px-5 py-3.5 flex items-center justify-between text-sm font-semibold text-white hover:bg-slate-800/50 transition-colors cursor-pointer"
             >
               <span className="flex items-center gap-2">
-                <UserPlus className="size-4" /> Manage Thotties (Add / Remove)
+                <UserPlus className="size-4 text-purple-400" /> Manage Participants (Add / Remove)
               </span>
-              {showManageThotties ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
+              {showManageThotties ? <ChevronUp className="size-4 text-slate-400" /> : <ChevronDown className="size-4 text-slate-400" />}
             </button>
 
             {showManageThotties && (
-              <div className="p-5 border-t border-border space-y-5 bg-inset/30">
-                {/* Add New Thottie Form */}
+              <div className="p-5 border-t border-slate-800 space-y-5 bg-slate-950/40">
+                {/* Add New Participant Form */}
                 <form onSubmit={handleAddParticipant} className="space-y-3">
-                  <h3 className="text-xs font-semibold text-secondary uppercase tracking-wider">
-                    Add New Thottie
+                  <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                    Add New Participant
                   </h3>
                   <div className="grid grid-cols-2 gap-2">
                     <Input
                       placeholder="Name (e.g. Sarah)"
                       value={newName}
                       onChange={(e) => setNewName(e.target.value)}
+                      className="bg-slate-950 border-slate-700 text-white placeholder-slate-500"
                     />
                     <Input
                       placeholder="State (e.g. CA)"
                       value={newLocation}
                       onChange={(e) => setNewLocation(e.target.value)}
+                      className="bg-slate-950 border-slate-700 text-white placeholder-slate-500"
                     />
                   </div>
                   {groups.length > 0 && (
                     <select
                       value={assignGroupId}
                       onChange={(e) => setAssignGroupId(e.target.value)}
-                      className="w-full bg-inset border border-border text-primary rounded-md p-2 text-xs focus:outline-none focus:border-accent"
+                      className="w-full bg-slate-950 border border-slate-700 text-white rounded-lg p-2 text-xs focus:outline-none focus:border-purple-500 cursor-pointer"
                     >
                       <option value="">Assign to Group (Optional)</option>
                       {groups.map((g) => (
@@ -725,33 +729,33 @@ export default function Admin() {
                   )}
                   <Button
                     variant="primary"
-                    className="w-full text-xs"
+                    className="w-full text-xs bg-purple-600 hover:bg-purple-500 text-white"
                     type="submit"
                     isLoading={addingParticipant}
                   >
-                    Add Thottie
+                    Add Participant
                   </Button>
                 </form>
 
-                {/* List Existing Thotties */}
-                <div className="space-y-2 pt-2 border-t border-border-weak">
-                  <h3 className="text-xs font-semibold text-secondary uppercase tracking-wider">
-                    Existing Thotties
+                {/* List Existing Participants */}
+                <div className="space-y-2 pt-2 border-t border-slate-800">
+                  <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                    Existing Participants
                   </h3>
                   <div className="space-y-1 max-h-40 overflow-y-auto pr-1">
                     {participants.map((p) => (
                       <div
                         key={p.id}
-                        className="flex items-center justify-between text-xs py-1.5 px-2 bg-inset rounded border border-border-weak"
+                        className="flex items-center justify-between text-xs py-1.5 px-2 bg-slate-950 rounded-md border border-slate-800"
                       >
-                        <span className="font-medium">
+                        <span className="font-medium text-slate-200">
                           {p.name} {p.location && `(${p.location})`}
                         </span>
                         <button
                           type="button"
                           onClick={() => handleDeleteParticipant(p)}
-                          className="text-secondary hover:text-error transition-colors p-1"
-                          title="Remove Thottie"
+                          className="text-slate-400 hover:text-red-400 transition-colors p-1 cursor-pointer"
+                          title="Remove Participant"
                         >
                           <UserX className="size-3.5" />
                         </button>
@@ -763,13 +767,13 @@ export default function Admin() {
             )}
           </div>
 
-          {/* Step 1: Choose Thottie */}
-          <div className="bg-raised border border-border rounded-lg p-5 space-y-4">
+          {/* Step 1: Choose Participant */}
+          <div className="bg-slate-900/70 border border-slate-800 rounded-xl p-5 space-y-4 shadow-sm">
             {/* Group Filter for Logging */}
             {groups.length > 0 && (
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-secondary flex items-center gap-1.5">
-                  <Users className="size-3.5 text-accent" /> Filter Thotties by Group:
+                <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+                  <Users className="size-3.5 text-purple-400" /> Filter Participants by Group:
                 </label>
                 <select
                   value={selectedGroupId}
@@ -777,7 +781,7 @@ export default function Admin() {
                     setSelectedGroupId(e.target.value);
                     setSelectedId(null);
                   }}
-                  className="w-full bg-inset border border-border text-primary rounded-md p-2 text-xs focus:outline-none focus:border-accent"
+                  className="w-full bg-slate-950 border border-slate-700 text-white rounded-lg p-2 text-xs focus:outline-none focus:border-purple-500 cursor-pointer"
                 >
                   <option value="all">All Groups</option>
                   {groups.map((g) => (
@@ -790,11 +794,11 @@ export default function Admin() {
             )}
 
             <FormItem error={errors.participant}>
-              <FormLabel>Step 1: Choose Thottie (For Single Entry)</FormLabel>
+              <FormLabel className="text-slate-200 font-semibold">Step 1: Choose Participant (For Single Entry)</FormLabel>
               <FormControl>
                 {participants.length === 0 && !isLoading ? (
-                  <p className="text-xs text-secondary py-3 text-center border border-dashed rounded-md">
-                    No Thotties found in this group yet. Add one above!
+                  <p className="text-xs text-slate-500 py-3 text-center border border-dashed border-slate-800 rounded-lg">
+                    No participants found in this group yet. Add one above!
                   </p>
                 ) : (
                   <div className="grid grid-cols-2 gap-2">
@@ -802,7 +806,7 @@ export default function Admin() {
                       ? [...Array(4)].map((_, i) => (
                           <div
                             key={i}
-                            className="h-9 bg-inset rounded-md animate-pulse"
+                            className="h-9 bg-slate-950 rounded-lg animate-pulse border border-slate-800"
                           />
                         ))
                       : participants.map((p) => (
@@ -813,10 +817,10 @@ export default function Admin() {
                               setSelectedId(p.id);
                               setErrors({});
                             }}
-                            className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium border transition-colors cursor-pointer ${
+                            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border transition-colors cursor-pointer ${
                               selectedId === p.id
-                                ? "bg-accent text-accent-fg border-accent font-bold"
-                                : "bg-inset text-primary border-border hover:bg-inset"
+                                ? "bg-purple-600 text-white border-purple-500 font-bold shadow-sm"
+                                : "bg-slate-950 text-slate-300 border-slate-800 hover:border-slate-700 hover:text-white"
                             }`}
                           >
                             <span className="truncate">{p.name}</span>
@@ -826,18 +830,18 @@ export default function Admin() {
                 )}
               </FormControl>
               {errors.participant && (
-                <FormMessage>{errors.participant}</FormMessage>
+                <FormMessage className="text-red-400">{errors.participant}</FormMessage>
               )}
             </FormItem>
           </div>
 
           {/* Option A: Single Day Entry */}
-          <div className="bg-raised border border-border rounded-lg p-5 space-y-4">
-            <h2 className="text-base font-semibold">Option A: Single Day Entry</h2>
+          <div className="bg-slate-900/70 border border-slate-800 rounded-xl p-5 space-y-4 shadow-sm">
+            <h2 className="text-base font-bold text-white">Option A: Single Day Entry</h2>
 
             <FormItem error={errors.date}>
-              <FormLabel>
-                <Calendar className="size-4" /> Date
+              <FormLabel className="text-slate-200 flex items-center gap-1.5">
+                <Calendar className="size-4 text-purple-400" /> Date
               </FormLabel>
               <FormControl>
                 <Input
@@ -845,14 +849,15 @@ export default function Admin() {
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
                   max={today}
+                  className="bg-slate-950 border-slate-700 text-white [color-scheme:dark]"
                 />
               </FormControl>
-              {errors.date && <FormMessage>{errors.date}</FormMessage>}
+              {errors.date && <FormMessage className="text-red-400">{errors.date}</FormMessage>}
             </FormItem>
 
             <FormItem error={errors.steps}>
-              <FormLabel>
-                <Footprints className="size-4" /> Steps
+              <FormLabel className="text-slate-200 flex items-center gap-1.5">
+                <Footprints className="size-4 text-purple-400" /> Steps
               </FormLabel>
               <FormControl>
                 <Input
@@ -861,23 +866,24 @@ export default function Admin() {
                   value={steps}
                   onChange={(e) => setSteps(e.target.value)}
                   min={0}
+                  className="bg-slate-950 border-slate-700 text-white placeholder-slate-500"
                 />
               </FormControl>
-              {errors.steps && <FormMessage>{errors.steps}</FormMessage>}
+              {errors.steps && <FormMessage className="text-red-400">{errors.steps}</FormMessage>}
             </FormItem>
 
             <div className="space-y-1.5">
-              <label className="flex items-center gap-1.5 text-sm font-medium text-primary">
-                <Dumbbell className="size-4" /> Workout completed?
+              <label className="flex items-center gap-1.5 text-sm font-medium text-slate-200">
+                <Dumbbell className="size-4 text-sky-400" /> Workout completed?
               </label>
               <div className="flex gap-2">
                 <button
                   type="button"
                   onClick={() => setWorkout(1)}
-                  className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm font-medium border transition-colors cursor-pointer ${
+                  className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium border transition-colors cursor-pointer ${
                     workout === 1
-                      ? "bg-success-weak text-success border-success"
-                      : "bg-inset text-secondary border-border hover:bg-inset"
+                      ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30 font-bold"
+                      : "bg-slate-950 text-slate-400 border-slate-800 hover:text-white"
                   }`}
                 >
                   <CheckCircle2 className="size-4" /> Yes
@@ -885,10 +891,10 @@ export default function Admin() {
                 <button
                   type="button"
                   onClick={() => setWorkout(0)}
-                  className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm font-medium border transition-colors cursor-pointer ${
+                  className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium border transition-colors cursor-pointer ${
                     workout === 0
-                      ? "bg-inset text-primary border-border-strong"
-                      : "bg-inset text-secondary border-border"
+                      ? "bg-slate-800 text-white border-slate-600 font-bold"
+                      : "bg-slate-950 text-slate-400 border-slate-800 hover:text-white"
                   }`}
                 >
                   No
@@ -897,17 +903,17 @@ export default function Admin() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="flex items-center gap-1.5 text-sm font-medium text-primary">
-                <Leaf className="size-4" /> Yoga completed?
+              <label className="flex items-center gap-1.5 text-sm font-medium text-slate-200">
+                <Leaf className="size-4 text-emerald-400" /> Yoga completed?
               </label>
               <div className="flex gap-2">
                 <button
                   type="button"
                   onClick={() => setYoga(1)}
-                  className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm font-medium border transition-colors cursor-pointer ${
+                  className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium border transition-colors cursor-pointer ${
                     yoga === 1
-                      ? "bg-success-weak text-success border-success"
-                      : "bg-inset text-secondary border-border hover:bg-inset"
+                      ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30 font-bold"
+                      : "bg-slate-950 text-slate-400 border-slate-800 hover:text-white"
                   }`}
                 >
                   <CheckCircle2 className="size-4" /> Yes
@@ -915,10 +921,10 @@ export default function Admin() {
                 <button
                   type="button"
                   onClick={() => setYoga(0)}
-                  className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm font-medium border transition-colors cursor-pointer ${
+                  className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium border transition-colors cursor-pointer ${
                     yoga === 0
-                      ? "bg-inset text-primary border-border-strong"
-                      : "bg-inset text-secondary border-border"
+                      ? "bg-slate-800 text-white border-slate-600 font-bold"
+                      : "bg-slate-950 text-slate-400 border-slate-800 hover:text-white"
                   }`}
                 >
                   No
@@ -928,7 +934,7 @@ export default function Admin() {
 
             <Button
               variant="primary"
-              className="w-full"
+              className="w-full bg-purple-600 hover:bg-purple-500 text-white"
               onClick={handleSingleSave}
               isLoading={saving}
               disabled={!selectedId}
@@ -938,22 +944,22 @@ export default function Admin() {
           </div>
 
           {/* Option B: Upload Tracking Sheet (CSV) */}
-          <div className="bg-raised border border-border rounded-lg p-5 space-y-3">
-            <h2 className="text-base font-semibold flex items-center gap-2">
-              <Upload className="size-4" /> Option B: Upload Spreadsheet (CSV)
+          <div className="bg-slate-900/70 border border-slate-800 rounded-xl p-5 space-y-3 shadow-sm">
+            <h2 className="text-base font-bold text-white flex items-center gap-2">
+              <Upload className="size-4 text-purple-400" /> Option B: Upload Spreadsheet (CSV)
             </h2>
-            <p className="text-xs text-secondary">
+            <p className="text-xs text-slate-400">
               Upload full Tracking Sheet or single-person CSV.
             </p>
             <input
               type="file"
               accept=".csv"
               onChange={(e) => setCsvFile(e.target.files?.[0] || null)}
-              className="block w-full text-xs text-secondary file:mr-3 file:py-2 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-inset file:text-primary hover:file:bg-border cursor-pointer"
+              className="block w-full text-xs text-slate-300 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-800 file:text-white hover:file:bg-slate-700 cursor-pointer"
             />
             <Button
               variant="primary"
-              className="w-full"
+              className="w-full bg-purple-600 hover:bg-purple-500 text-white"
               onClick={handleFileUpload}
               isLoading={saving}
               disabled={!csvFile}
@@ -964,21 +970,21 @@ export default function Admin() {
         </div>
 
         {/* Right Box: Recent Logs */}
-        <div className="bg-raised border border-border rounded-lg p-5 space-y-3 h-fit">
-          <h2 className="text-base font-semibold">
+        <div className="bg-slate-900/70 border border-slate-800 rounded-xl p-5 space-y-3 h-fit shadow-sm">
+          <h2 className="text-base font-bold text-white">
             {selected
               ? `${selected.name}'s Recent Logs`
-              : "Select a Thottie"}
+              : "Select a Participant"}
           </h2>
 
           {!selected && (
-            <p className="text-sm text-secondary py-8 text-center">
-              Choose a Thottie on the left to see their recent entries.
+            <p className="text-sm text-slate-500 py-8 text-center">
+              Choose a participant on the left to see their recent entries.
             </p>
           )}
 
           {selected && logs.length === 0 && (
-            <p className="text-sm text-secondary py-8 text-center">
+            <p className="text-sm text-slate-500 py-8 text-center">
               No entries logged yet for {selected.name}.
             </p>
           )}
@@ -987,37 +993,37 @@ export default function Admin() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-border-weak">
-                    <th className="text-left pb-2 text-secondary font-medium text-xs">Date</th>
-                    <th className="text-right pb-2 text-secondary font-medium text-xs">Steps</th>
-                    <th className="text-center pb-2 text-secondary font-medium text-xs">
-                      <Dumbbell className="size-3 inline" />
+                  <tr className="border-b border-slate-800">
+                    <th className="text-left pb-2 text-slate-400 font-medium text-xs">Date</th>
+                    <th className="text-right pb-2 text-slate-400 font-medium text-xs">Steps</th>
+                    <th className="text-center pb-2 text-slate-400 font-medium text-xs">
+                      <Dumbbell className="size-3 inline text-sky-400" />
                     </th>
-                    <th className="text-center pb-2 text-secondary font-medium text-xs">
-                      <Leaf className="size-3 inline" />
+                    <th className="text-center pb-2 text-slate-400 font-medium text-xs">
+                      <Leaf className="size-3 inline text-emerald-400" />
                     </th>
-                    <th className="text-right pb-2 text-secondary font-medium text-xs">Action</th>
+                    <th className="text-right pb-2 text-slate-400 font-medium text-xs">Action</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-border-weak">
+                <tbody className="divide-y divide-slate-800/60">
                   {logs.map((log) => (
                     <tr key={log.id}>
-                      <td className="py-2 text-secondary text-xs">{formatDate(log.log_date)}</td>
-                      <td className="py-2 text-right font-medium">
+                      <td className="py-2 text-slate-300 text-xs font-mono">{formatDate(log.log_date)}</td>
+                      <td className="py-2 text-right font-medium text-white font-mono">
                         {log.steps > 0 ? log.steps.toLocaleString() : "—"}
                       </td>
                       <td className="py-2 text-center">
                         {log.workout === 1 ? (
-                          <span className="text-success text-xs">✓</span>
+                          <span className="text-emerald-400 text-xs font-bold">✓</span>
                         ) : (
-                          <span className="text-secondary text-xs">—</span>
+                          <span className="text-slate-600 text-xs">—</span>
                         )}
                       </td>
                       <td className="py-2 text-center">
                         {log.yoga === 1 ? (
-                          <span className="text-success text-xs">✓</span>
+                          <span className="text-emerald-400 text-xs font-bold">✓</span>
                         ) : (
-                          <span className="text-secondary text-xs">—</span>
+                          <span className="text-slate-600 text-xs">—</span>
                         )}
                       </td>
                       <td className="py-2 text-right">
@@ -1025,7 +1031,7 @@ export default function Admin() {
                           type="button"
                           onClick={() => handleDeleteEntry(log.id)}
                           disabled={deletingId === log.id}
-                          className="text-secondary hover:text-error transition-colors p-1 rounded cursor-pointer"
+                          className="text-slate-400 hover:text-red-400 transition-colors p-1 rounded cursor-pointer"
                           title="Delete entry"
                         >
                           <Trash2 className="size-3.5" />
