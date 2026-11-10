@@ -505,9 +505,8 @@ export default function Admin() {
       const workout = wRaw === "1" || wRaw.toLowerCase() === "y" || wRaw.toLowerCase() === "true" ? 1 : 0;
       const yoga = yRaw === "1" || yRaw.toLowerCase() === "y" || yRaw.toLowerCase() === "true" ? 1 : 0;
 
-      if (steps > 0 || workout > 0 || yoga > 0) {
-        logs.push({ log_date: isoDate, steps, workout, yoga });
-      }
+      // Always push log so clearing a cell sets it to 0
+      logs.push({ log_date: isoDate, steps, workout, yoga });
     }
     return logs;
   }
