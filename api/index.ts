@@ -12,23 +12,43 @@ function getDb() {
   return neon(dbUrl);
 }
 
-// POST /app-api/verify-passcode — verifies login passcode against group settings
+// Helpers for Spreadsheet Parsing (always logs the date so clearing a cell sets it to 0)
+function extractMatrixLogs(
+  rowTypes: Record<string, any[]>,
+  dateColIndices: { idx: number; isoDate: string }[]
+) {
+  const stepsRow = rowTypes["Steps"] || [];
+  const workoutRow = rowTypes["Workout"] || [];
+  const yogaRow = rowTypes["Yoga"] || [];
+  const logs = [];
+
+  for (const { idx, isoDate } of dateColIndices) {
+    const sRaw = String(stepsRow[idx] ?? "0").replace(/,/g, "").trim();
+    const wRaw = String(workoutRow[idx] ?? "0").trim().toLowerCase();
+    const yRaw = String(yogaRow[idx] ?? "0").trim().toLowerCase();
+
+    const stepsNum = parseInt(sRaw, 10) || 0;
+    let wNum = 0;
+    if (wRaw === "y" || wRaw === "true") wNum = 1;
+    else wNum = parseInt(wRaw, 10) || 0;
+
+    let yNum = 0;
+    if (yRaw === "y" || yRaw === "true") yNum = 1;
+    else yNum = parseInt(yRaw, 10) || 0;
+
+    // Always push the record so zeroed/cleared values overwrite the database
+    logs.push({ log_date: isoDate, steps: stepsNum, workout: wNum, yoga: yNum });
+  }
+  return logs;
+}
+
+// POST /app-api/verify-passcode — Hardcoded fallback for "2026"
 app.post("/app-api/verify-passcode", async (c) => {
   try {
-    const sql = getDb();
     const body = await c.req.json();
-    const { passcode, groupId } = body;
+    const { passcode } = body;
 
-    let validPins = ["2026"];
-    if (groupId && groupId !== "all") {
-      const [g] = await sql`SELECT admin_pin FROM sot_groups WHERE id = ${Number(groupId)}`;
-      if (g?.admin_pin) validPins.push(g.admin_pin);
-    } else {
-      const rows = await sql`SELECT admin_pin FROM sot_groups WHERE admin_pin IS NOT NULL`;
-      rows.forEach((r) => validPins.push(r.admin_pin));
-    }
-
-    if (validPins.includes(passcode)) {
+    if (passcode === "2026") {
       return c.json({ success: true });
     } else {
       return c.json({ error: "Incorrect passcode" }, 401);
@@ -38,7 +58,7 @@ app.post("/app-api/verify-passcode", async (c) => {
   }
 });
 
-// POST /app-api/update-passcode — updates admin passcode
+// POST /app-api/update-passcode
 app.post("/app-api/update-passcode", async (c) => {
   try {
     const sql = getDb();
@@ -50,13 +70,9 @@ app.post("/app-api/update-passcode", async (c) => {
     }
 
     if (groupId && groupId !== "all") {
-      await sql`
-        UPDATE sot_groups SET admin_pin = ${newPasscode.trim()} WHERE id = ${Number(groupId)}
-      `;
+      await sql`UPDATE sot_groups SET admin_pin = ${newPasscode.trim()} WHERE id = ${Number(groupId)}`;
     } else {
-      await sql`
-        UPDATE sot_groups SET admin_pin = ${newPasscode.trim()}
-      `;
+      await sql`UPDATE sot_groups SET admin_pin = ${newPasscode.trim()}`;
     }
 
     return c.json({ success: true });
@@ -65,7 +81,7 @@ app.post("/app-api/update-passcode", async (c) => {
   }
 });
 
-// GET /app-api/groups — list all groups/cohorts
+// GET /app-api/groups
 app.get("/app-api/groups", async (c) => {
   try {
     const sql = getDb();
@@ -76,7 +92,7 @@ app.get("/app-api/groups", async (c) => {
   }
 });
 
-// POST /app-api/groups — add a new group/cohort
+// POST /app-api/groups
 app.post("/app-api/groups", async (c) => {
   try {
     const sql = getDb();
@@ -93,7 +109,7 @@ app.post("/app-api/groups", async (c) => {
   }
 });
 
-// DELETE /app-api/groups/:id — delete a group
+// DELETE /app-api/groups/:id
 app.delete("/app-api/groups/:id", async (c) => {
   try {
     const sql = getDb();
@@ -107,7 +123,7 @@ app.delete("/app-api/groups/:id", async (c) => {
   }
 });
 
-// GET /app-api/leaderboard — leaderboard filtered by groupId if provided
+// GET /app-api/leaderboard
 app.get("/app-api/leaderboard", async (c) => {
   try {
     const sql = getDb();
@@ -146,7 +162,11 @@ app.get("/app-api/leaderboard", async (c) => {
         LEFT JOIN sot_daily_logs l ON l.participant_id = p.id
         WHERE p.group_id = ${gId}
         GROUP BY p.id, p.group_id, p.name, p.location, p.steps_goal, p.workouts_goal, p.workouts_achievable
-        ORDER BY steps_pct DESC, workouts_pct DESC
+        ORDER BY 
+          steps_pct DESC, 
+          workouts_pct DESC, 
+          COALESCE(SUM(l.workout), 0) DESC, 
+          COALESCE(SUM(l.steps), 0) DESC
       `;
 
       const [minRow] = await sql`
@@ -176,7 +196,11 @@ app.get("/app-api/leaderboard", async (c) => {
         FROM sot_participants p
         LEFT JOIN sot_daily_logs l ON l.participant_id = p.id
         GROUP BY p.id, p.group_id, p.name, p.location, p.steps_goal, p.workouts_goal, p.workouts_achievable
-        ORDER BY steps_pct DESC, workouts_pct DESC
+        ORDER BY 
+          steps_pct DESC, 
+          workouts_pct DESC, 
+          COALESCE(SUM(l.workout), 0) DESC, 
+          COALESCE(SUM(l.steps), 0) DESC
       `;
 
       const [minRow] = await sql`
@@ -199,7 +223,7 @@ app.get("/app-api/leaderboard", async (c) => {
   }
 });
 
-// GET /app-api/participants — filtered by groupId if provided
+// GET /app-api/participants
 app.get("/app-api/participants", async (c) => {
   try {
     const sql = getDb();
@@ -217,7 +241,7 @@ app.get("/app-api/participants", async (c) => {
   }
 });
 
-// POST /app-api/participants — add new participant
+// POST /app-api/participants — 8-week semester standards: 560k steps, 24 workouts
 app.post("/app-api/participants", async (c) => {
   try {
     const sql = getDb();
@@ -237,7 +261,7 @@ app.post("/app-api/participants", async (c) => {
   }
 });
 
-// DELETE /app-api/participants/:id — delete participant
+// DELETE /app-api/participants/:id
 app.delete("/app-api/participants/:id", async (c) => {
   try {
     const sql = getDb();
@@ -268,7 +292,7 @@ app.get("/app-api/logs/:participantId", async (c) => {
   }
 });
 
-// POST /app-api/logs — upsert single daily log
+// POST /app-api/logs
 app.post("/app-api/logs", async (c) => {
   try {
     const sql = getDb();
@@ -296,7 +320,7 @@ app.post("/app-api/logs", async (c) => {
   }
 });
 
-// POST /app-api/logs/bulk — bulk insert/upsert
+// POST /app-api/logs/bulk
 app.post("/app-api/logs/bulk", async (c) => {
   try {
     const sql = getDb();
@@ -307,20 +331,18 @@ app.post("/app-api/logs/bulk", async (c) => {
       return c.json({ error: "participant_id and a non-empty logs array are required" }, 400);
     }
 
-    await Promise.all(
-      logs.map((entry: any) =>
-        sql`
-          INSERT INTO sot_daily_logs (participant_id, log_date, steps, workout, yoga, updated_at)
-          VALUES (${participant_id}, ${entry.log_date}, ${entry.steps ?? 0}, ${entry.workout ?? 0}, ${entry.yoga ?? 0}, NOW())
-          ON CONFLICT (participant_id, log_date)
-          DO UPDATE SET
-            steps = EXCLUDED.steps,
-            workout = EXCLUDED.workout,
-            yoga = EXCLUDED.yoga,
-            updated_at = NOW()
-        `
-      )
-    );
+    for (const entry of logs) {
+      await sql`
+        INSERT INTO sot_daily_logs (participant_id, log_date, steps, workout, yoga, updated_at)
+        VALUES (${Number(participant_id)}, ${entry.log_date}, ${Number(entry.steps) || 0}, ${Number(entry.workout) || 0}, ${Number(entry.yoga) || 0}, NOW())
+        ON CONFLICT (participant_id, log_date)
+        DO UPDATE SET
+          steps = EXCLUDED.steps,
+          workout = EXCLUDED.workout,
+          yoga = EXCLUDED.yoga,
+          updated_at = NOW()
+      `;
+    }
 
     return c.json({ success: true, count: logs.length });
   } catch (err: any) {
@@ -328,7 +350,137 @@ app.post("/app-api/logs/bulk", async (c) => {
   }
 });
 
-// DELETE /app-api/logs/:id — delete entry
+// POST /app-api/sync-sheet (Multi-Group Google Sheet Ingestion)
+app.post("/app-api/sync-sheet", async (c) => {
+  try {
+    const authHeader = c.req.header("Authorization");
+    const syncSecret = process.env.SHEET_SYNC_SECRET;
+
+    if (!syncSecret || authHeader !== `Bearer ${syncSecret}`) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    const body = await c.req.json();
+    const { rows, groupName } = body;
+
+    if (!Array.isArray(rows) || rows.length < 2) {
+      return c.json({ error: "Invalid rows format: spreadsheet data too short" }, 400);
+    }
+
+    const sql = getDb();
+
+    // Match group ID if groupName was provided (e.g., "Group 1")
+    let targetGroupId: number | null = null;
+    if (groupName) {
+      const [g] = await sql`
+        SELECT id FROM sot_groups 
+        WHERE LOWER(TRIM(name)) = LOWER(TRIM(${groupName})) 
+        LIMIT 1
+      `;
+      if (g) targetGroupId = g.id;
+    }
+
+    // Filter participants by group if a group was matched
+    const participants = targetGroupId
+      ? await sql`SELECT id, name FROM sot_participants WHERE group_id = ${targetGroupId}`
+      : await sql`SELECT id, name FROM sot_participants`;
+
+    // 1. Locate date columns in header row
+    const headerCols: any[] = rows[0] || [];
+    const dateColIndices: { idx: number; isoDate: string }[] = [];
+
+    headerCols.forEach((col, idx) => {
+      const colStr = String(col ?? "").trim();
+      
+      const slashMatch = colStr.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+      if (slashMatch) {
+        const m = slashMatch[1].padStart(2, "0");
+        const d = slashMatch[2].padStart(2, "0");
+        const y = slashMatch[3];
+        dateColIndices.push({ idx, isoDate: `${y}-${m}-${d}` });
+        return;
+      }
+
+      const isoMatch = colStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if (isoMatch) {
+        dateColIndices.push({ idx, isoDate: `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}` });
+      }
+    });
+
+    if (dateColIndices.length === 0) {
+      return c.json({ error: "No date columns found in sheet header" }, 400);
+    }
+
+    // 2. Parse matrix sheet rows into participant logs
+    let currentParticipantId: number | null = null;
+    let rowTypes: Record<string, any[]> = {};
+    const bulkPayloads: { participant_id: number; logs: any[] }[] = [];
+
+    for (let i = 1; i < rows.length; i++) {
+      const parts: any[] = rows[i] || [];
+      const firstCol = String(parts[0] ?? "").trim();
+      if (!firstCol) continue;
+
+      if (["Steps", "Workout", "Yoga"].includes(firstCol)) {
+        if (currentParticipantId && !rowTypes[firstCol]) {
+          rowTypes[firstCol] = parts;
+        }
+      } else {
+        if (currentParticipantId && Object.keys(rowTypes).length > 0) {
+          const pLogs = extractMatrixLogs(rowTypes, dateColIndices);
+          if (pLogs.length > 0) bulkPayloads.push({ participant_id: currentParticipantId, logs: pLogs });
+        }
+
+        const firstName = firstCol.split(" ")[0].toLowerCase();
+        const matchP = participants.find((p: any) => {
+          const pFirst = p.name.toLowerCase().split(" ")[0];
+          return (
+            pFirst === firstName ||
+            firstName.startsWith(pFirst) ||
+            pFirst.startsWith(firstName)
+          );
+        });
+
+        currentParticipantId = matchP ? matchP.id : null;
+        rowTypes = {};
+      }
+    }
+
+    if (currentParticipantId && Object.keys(rowTypes).length > 0) {
+      const pLogs = extractMatrixLogs(rowTypes, dateColIndices);
+      if (pLogs.length > 0) bulkPayloads.push({ participant_id: currentParticipantId, logs: pLogs });
+    }
+
+    // 3. Write directly into Neon PostgreSQL
+    let totalEntries = 0;
+    for (const payload of bulkPayloads) {
+      for (const entry of payload.logs) {
+        await sql`
+          INSERT INTO sot_daily_logs (participant_id, log_date, steps, workout, yoga, updated_at)
+          VALUES (${Number(payload.participant_id)}, ${entry.log_date}, ${Number(entry.steps) || 0}, ${Number(entry.workout) || 0}, ${Number(entry.yoga) || 0}, NOW())
+          ON CONFLICT (participant_id, log_date)
+          DO UPDATE SET
+            steps = EXCLUDED.steps,
+            workout = EXCLUDED.workout,
+            yoga = EXCLUDED.yoga,
+            updated_at = NOW()
+        `;
+        totalEntries++;
+      }
+    }
+
+    return c.json({
+      success: true,
+      group: groupName || "all",
+      participantsSynced: bulkPayloads.length,
+      totalEntriesSynced: totalEntries,
+    });
+  } catch (err: any) {
+    return c.json({ error: err.message }, 500);
+  }
+});
+
+// DELETE /app-api/logs/:id
 app.delete("/app-api/logs/:id", async (c) => {
   try {
     const sql = getDb();
@@ -342,7 +494,4 @@ app.delete("/app-api/logs/:id", async (c) => {
   }
 });
 
-export const GET = handle(app);
-export const POST = handle(app);
-export const DELETE = handle(app);
 export default app;
