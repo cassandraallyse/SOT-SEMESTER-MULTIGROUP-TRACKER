@@ -60,12 +60,6 @@ const WEEK_STEPS_GOAL = 70000;
 const WEEK_WORKOUTS_GOAL = 3;
 
 const MEDALS = ["🥇", "🥈", "🥉"];
-const RANK_LABELS = [
-  { min: 80, label: "On Fire 🔥", color: "text-success" },
-  { min: 50, label: "Crushing It 💪", color: "text-accent" },
-  { min: 25, label: "In Progress 📈", color: "text-warning" },
-  { min: 0, label: "Just Getting Started 🌱", color: "text-secondary" },
-];
 
 const MANTRAS = [
   "Miracles are happening!",
@@ -78,8 +72,20 @@ const MANTRAS = [
   "Things are always working out for my highest good.",
 ];
 
-function getRankLabel(pct: number) {
-  return RANK_LABELS.find((r) => pct >= r.min) ?? RANK_LABELS[3];
+// 50/50 Dual Threshold Tier Progression
+function getTier(stepsPct: number, workoutsPct: number) {
+  const avg = (stepsPct + workoutsPct) / 2;
+
+  if (avg >= 100) {
+    return { name: "Master Thottie 👑", color: "bg-purple-500/20 text-purple-300 border-purple-500/30" };
+  }
+  if (avg >= 70) {
+    return { name: "Crushing It 💪", color: "bg-emerald-500/20 text-emerald-300 border-emerald-500/30" };
+  }
+  if (avg >= 40) {
+    return { name: "Building Momentum 📈", color: "bg-blue-500/20 text-blue-300 border-blue-500/30" };
+  }
+  return { name: "Just Getting Started 🌱", color: "bg-zinc-800 text-zinc-300 border-zinc-700" };
 }
 
 function getProgressVariant(
@@ -166,13 +172,28 @@ export default function Leaderboard() {
     );
   }
 
-  const participants: Participant[] = Array.isArray(data) ? data : data?.rows || [];
+  const rawParticipants: Participant[] = Array.isArray(data) ? data : data?.rows || [];
   const lastUpdated: string | null = Array.isArray(data) ? null : data?.lastUpdated || null;
+
+  // Primary 50/50 Dual Threshold Sorting Logic with Tie-Breakers
+  const participants = [...rawParticipants].sort((a, b) => {
+    const aSteps = a.steps_goal > 0 ? (a.steps_total / a.steps_goal) * 100 : 0;
+    const aWorkouts = a.workouts_goal > 0 ? (a.workouts_total / a.workouts_goal) * 100 : 0;
+    const aComposite = (aSteps + aWorkouts) / 2;
+
+    const bSteps = b.steps_goal > 0 ? (b.steps_total / b.steps_goal) * 100 : 0;
+    const bWorkouts = b.workouts_goal > 0 ? (b.workouts_total / b.workouts_goal) * 100 : 0;
+    const bComposite = (bSteps + bWorkouts) / 2;
+
+    if (bComposite !== aComposite) return bComposite - aComposite;
+    if (b.workouts_total !== a.workouts_total) return b.workouts_total - a.workouts_total;
+    return b.steps_total - a.steps_total;
+  });
 
   const currentGroupObj = groups.find((g) => String(g.id) === selectedGroupId);
 
-  // Locked 8-Week Session Dates: September 14, 2026 to November 8, 2026
-  const semesterStart = new Date(2026, 8, 14); // Month 8 is Sept
+  // 8-Week Session Parameters
+  const semesterStart = new Date(2026, 8, 14); // Sep 14, 2026
   const TOTAL_WEEKS = 8;
   const TOTAL_DAYS = 56;
 
@@ -210,7 +231,7 @@ export default function Leaderboard() {
         </div>
       )}
 
-      {/* Group / Cohort Filter Bar (Dark Mode Updated) */}
+      {/* Group / Cohort Filter Bar */}
       {!isPrivateGroupView && groups.length > 0 && (
         <div className="bg-slate-900/70 border border-slate-800 rounded-xl p-3.5 flex items-center justify-between gap-4 shadow-sm">
           <label className="text-xs font-semibold text-slate-300 flex items-center gap-2 shrink-0">
@@ -267,7 +288,7 @@ export default function Leaderboard() {
       {/* Player cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {participants.map((p, idx) => {
-          const rank = getRankLabel(p.steps_pct);
+          const tier = getTier(p.steps_pct, p.workouts_pct);
           const medal = MEDALS[idx] ?? null;
           const stepsLeft = Math.max(0, p.steps_goal - p.steps_total);
           const workoutsLeft = Math.max(0, p.workouts_goal - p.workouts_total);
@@ -277,8 +298,8 @@ export default function Leaderboard() {
               key={p.id}
               className="bg-raised border border-border rounded-lg p-5 space-y-4"
             >
-              {/* Name + rank */}
-              <div className="flex items-start justify-between">
+              {/* Name + Tier badge */}
+              <div className="flex items-start justify-between gap-2">
                 <div>
                   <div className="flex items-center gap-2">
                     {medal && <span className="text-2xl">{medal}</span>}
@@ -288,13 +309,13 @@ export default function Leaderboard() {
                       </span>
                     )}
                     <div>
-                      <h2 className="text-base font-semibold">{p.name}</h2>
+                      <h2 className="text-base font-semibold text-white">{p.name}</h2>
                       {p.location && <p className="text-xs text-secondary">{p.location}</p>}
                     </div>
                   </div>
                 </div>
-                <span className={`text-xs font-medium ${rank.color}`}>
-                  {rank.label}
+                <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full border shadow-sm ${tier.color}`}>
+                  {tier.name}
                 </span>
               </div>
 
@@ -302,10 +323,10 @@ export default function Leaderboard() {
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between text-sm">
                   <span className="flex items-center gap-1.5 text-secondary">
-                    <Footprints className="size-3.5" />
+                    <Footprints className="size-3.5 text-purple-400" />
                     Steps
                   </span>
-                  <span className="font-semibold">
+                  <span className="font-semibold text-white font-mono">
                     {formatSteps(p.steps_total)}
                     <span className="text-secondary font-normal text-xs">
                       /{formatSteps(p.steps_goal)}
@@ -327,10 +348,10 @@ export default function Leaderboard() {
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between text-sm">
                   <span className="flex items-center gap-1.5 text-secondary">
-                    <Dumbbell className="size-3.5" />
+                    <Dumbbell className="size-3.5 text-sky-400" />
                     Workouts
                   </span>
-                  <span className="font-semibold">
+                  <span className="font-semibold text-white font-mono">
                     {p.workouts_total}
                     <span className="text-secondary font-normal text-xs">
                       /{p.workouts_goal} required
@@ -351,14 +372,14 @@ export default function Leaderboard() {
               {/* This week */}
               <div className="rounded-md bg-inset p-3 space-y-2">
                 <p className="text-xs font-medium text-secondary flex items-center gap-1.5">
-                  <CalendarDays className="size-3.5" /> This week
+                  <CalendarDays className="size-3.5 text-purple-400" /> This week
                 </p>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <div className="flex items-center justify-between text-xs">
                       <span className="text-secondary">Steps</span>
                       <span
-                        className={`font-semibold ${
+                        className={`font-semibold font-mono ${
                           p.week_steps >= WEEK_STEPS_GOAL
                             ? "text-success"
                             : "text-primary"
@@ -389,7 +410,7 @@ export default function Leaderboard() {
                     <div className="flex items-center justify-between text-xs">
                       <span className="text-secondary">Workouts</span>
                       <span
-                        className={`font-semibold ${
+                        className={`font-semibold font-mono ${
                           p.week_workouts >= WEEK_WORKOUTS_GOAL
                             ? "text-success"
                             : "text-primary"
@@ -424,17 +445,17 @@ export default function Leaderboard() {
               {/* Overall score bubble & Optional Yoga Bonus */}
               <div className="flex items-center justify-between pt-1 border-t border-border-weak">
                 <span className="text-xs text-secondary flex items-center gap-1">
-                  <Award className="size-3.5" />
+                  <Award className="size-3.5 text-purple-400" />
                   Semester total
                 </span>
                 <div className="flex items-center gap-3">
                   {p.yoga_total > 0 && (
-                    <span className="text-xs text-success flex items-center gap-1 font-medium bg-success-weak px-2 py-0.5 rounded">
+                    <span className="text-xs text-emerald-400 flex items-center gap-1 font-medium bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded">
                       <Leaf className="size-3" /> {p.yoga_total} Yoga
                     </span>
                   )}
                   <div>
-                    <span className="text-sm font-bold text-accent">
+                    <span className="text-sm font-bold text-accent font-mono">
                       {((p.steps_pct + p.workouts_pct) / 2).toFixed(1)}%
                     </span>
                     <span className="text-xs text-secondary ml-1">overall</span>
