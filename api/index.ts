@@ -12,6 +12,15 @@ function getDb() {
   return neon(dbUrl);
 }
 
+// Helper to parse participant rows: "Amy R. (CO), wants tighter macros" -> name: "Amy R.", location: "CO"
+function parseParticipantHeader(rawStr: string) {
+  const cleaned = rawStr.split(/[,;\-:]/)[0].trim();
+  const locMatch = cleaned.match(/\(([A-Za-z\s]+)\)/);
+  const location = locMatch ? locMatch[1].trim() : "";
+  const name = cleaned.replace(/\s*\(.*?\)\s*/g, "").trim();
+  return { name, location };
+}
+
 // Helpers for Spreadsheet Parsing (always logs the date so clearing a cell sets it to 0)
 function extractMatrixLogs(
   rowTypes: Record<string, any[]>,
@@ -36,7 +45,6 @@ function extractMatrixLogs(
     if (yRaw === "y" || yRaw === "true") yNum = 1;
     else yNum = parseInt(yRaw, 10) || 0;
 
-    // Always push the record so zeroed/cleared values overwrite the database
     logs.push({ log_date: isoDate, steps: stepsNum, workout: wNum, yoga: yNum });
   }
   return logs;
@@ -241,7 +249,7 @@ app.get("/app-api/participants", async (c) => {
   }
 });
 
-// POST /app-api/participants — 8-week semester standards: 560k steps, 24 workouts
+// POST /app-api/participants — 8-week standards: 560k steps, 24 workouts
 app.post("/app-api/participants", async (c) => {
   try {
     const sql = getDb();
@@ -350,7 +358,7 @@ app.post("/app-api/logs/bulk", async (c) => {
   }
 });
 
-// POST /app-api/sync-sheet (Multi-Group Google Sheet Ingestion)
+// POST /app-api/sync-sheet (Multi-Group Auto-Creation & Ingestion)
 app.post("/app-api/sync-sheet", async (c) => {
   try {
     const authHeader = c.req.header("Authorization");
@@ -380,7 +388,6 @@ app.post("/app-api/sync-sheet", async (c) => {
       if (g) targetGroupId = g.id;
     }
 
-    // Filter participants by group if a group was matched
     const participants = targetGroupId
       ? await sql`SELECT id, name FROM sot_participants WHERE group_id = ${targetGroupId}`
       : await sql`SELECT id, name FROM sot_participants`;
@@ -431,8 +438,11 @@ app.post("/app-api/sync-sheet", async (c) => {
           if (pLogs.length > 0) bulkPayloads.push({ participant_id: currentParticipantId, logs: pLogs });
         }
 
-        const firstName = firstCol.split(" ")[0].toLowerCase();
-        const matchP = participants.find((p: any) => {
+        // Clean: "Amy R. (CO), wants tighter macros" -> name: "Amy R.", location: "CO"
+        const { name: parsedName, location: parsedLocation } = parseParticipantHeader(firstCol);
+        const firstName = parsedName.split(" ")[0].toLowerCase();
+
+        let matchP = participants.find((p: any) => {
           const pFirst = p.name.toLowerCase().split(" ")[0];
           return (
             pFirst === firstName ||
@@ -440,6 +450,17 @@ app.post("/app-api/sync-sheet", async (c) => {
             pFirst.startsWith(firstName)
           );
         });
+
+        // Auto-provision if not found in database (8-Week Standards: 560k steps, 24 workouts)
+        if (!matchP && targetGroupId && parsedName) {
+          const [newP] = await sql`
+            INSERT INTO sot_participants (name, location, group_id, steps_goal, workouts_goal)
+            VALUES (${parsedName}, ${parsedLocation}, ${targetGroupId}, 560000, 24)
+            RETURNING id, name
+          `;
+          participants.push(newP);
+          matchP = newP;
+        }
 
         currentParticipantId = matchP ? matchP.id : null;
         rowTypes = {};
